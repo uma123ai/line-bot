@@ -1,0 +1,44 @@
+pip install flask requests openpyxl
+
+C:\Users\user\Desktop\line(我的路徑)
+
+執行1. 2. 記得改掉CHANNEL_ACCESS_TOKEN
+在終端執行ngrok  
+
+三個終端機都不能關 
+
+
+
+
+
+
+
+1. 註冊並取得 authtoken
+到 ngrok 官網註冊免費帳號：https://ngrok.com/signup
+
+登入後，到 Dashboard → Auth 頁面
+
+複製你的 authtoken（類似這樣的字串：2zqWL3KLdLC1KhL9aG8PgX3Un7O_4ydFs2rbfMdRV1wbwe7sv）
+
+2. 安裝 ngrok
+官方網站下載適合你系統的 ngrok：https://ngrok.com/download
+
+解壓並放到你方便執行的位置（例如你的專案資料夾）
+
+3. 用命令列設定 authtoken
+打開終端機（CMD、PowerShell、Terminal），執行：
+
+
+ngrok config add-authtoken <你的 authtoken>
+
+ngrok config add-authtoken 2zqWL3KLdLC1KhL9aG8PgX3Un7O_4ydFs2rbfMdRV1wbwe7sv
+這會把 authtoken 寫入 ngrok 本地設定檔（一般是 ~/.ngrok2/ngrok.yml）
+
+4. 啟動你的代理服務
+假設你的 Flask 伺服器跑在本地 5000 端口，啟動 ngrok：
+
+ngrok http 5000
+啟動後，ngrok 會顯示一組公開網址（https://xxxx.ngrok.io），這個網址會把流量轉發到你本地的 5000 端口。
+
+5. 設定 LINE Webhook
+把剛剛 ngrok 給你的網址（加上 /webhook）貼到 LINE Messaging API 後台的 Webhook URL，並啟用 Webhook。
