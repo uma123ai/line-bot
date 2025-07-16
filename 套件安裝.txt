@@ -1,1 +1,0 @@
-pip install flask openpyxl pyngrok cloudinary line-bot-sdk python-dotenv
