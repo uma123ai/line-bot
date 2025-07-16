@@ -1,0 +1,3 @@
+pip install flask openpyxl pyngrok cloudinary line-bot-sdk python-dotenv
+
+還要設定路徑到目前資料夾和 python "linesdk版.py"
