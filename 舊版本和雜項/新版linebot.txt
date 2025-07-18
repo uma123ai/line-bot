@@ -1,0 +1,126 @@
+# -*- coding: utf-8 -*-
+import os
+import time
+import threading
+import requests
+from flask import Flask, request
+from openpyxl import load_workbook
+#pip install flask requests openpyxl 終端
+
+app = Flask(__name__)
+
+# ===== LINE 機器人基本設定 =====
+CHANNEL_ACCESS_TOKEN = "QOUNRqg0GxzTYA50LypSTmPZenRi43upy0JjEdvU8fXqzgTSsV4AYzwZzpjNaD+akDNyLxPhaJDTmmctgx0d1XbSZfRNc4UpYV3rjI1FvRYrgXf9jwksBC2K4pmmiWva9Zv/qrXyvWqvQ+Ch+J5GDQdB04t89/1O/w1cDnyilFU="
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+}
+
+EXCEL_FILE = "出入紀錄.xlsx"
+USER_ID_FILE = "user_ids.txt"
+last_row_num = 0
+
+# ===== 推播訊息給單一使用者 =====
+def push_message(text, user_id):
+    data = {
+        "to": user_id,
+        "messages": [{"type": "text", "text": text}]
+    }
+    url = "https://api.line.me/v2/bot/message/push"
+    r = requests.post(url, headers=HEADERS, json=data)
+    print(f"🔔 推播給 {user_id}：{r.status_code}")
+
+# ===== 多人推播 =====
+def push_to_all_users(text):
+    user_ids = load_user_ids()
+    for uid in user_ids:
+        push_message(text, uid)
+
+# ===== 儲存 userId（避免重複）=====
+def save_user_id(user_id):
+    if not os.path.exists(USER_ID_FILE):
+        with open(USER_ID_FILE, "w"): pass
+
+    with open(USER_ID_FILE, "r+") as f:
+        ids = [line.strip() for line in f]
+        if user_id not in ids:
+            f.write(user_id + "\n")
+            print("✅ 儲存新 userId：", user_id)
+
+# ===== 讀取所有儲存過的 userId =====
+def load_user_ids():
+    if not os.path.exists(USER_ID_FILE):
+        return []
+    with open(USER_ID_FILE, "r") as f:
+        return [line.strip() for line in f if line.strip()]
+
+# ===== Webhook 接收 LINE 訊息 =====
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    body = request.json
+    events = body.get("events", [])
+    for event in events:
+        if event["type"] == "message":
+            user_id = event["source"]["userId"]
+            text = event["message"]["text"]
+            reply_token = event["replyToken"]
+
+            save_user_id(user_id)  # 儲存 userId
+            reply_message(reply_token, f"👋 哈囉，我已收到你的訊息：{text}")
+    return "OK"
+
+# ===== 回覆使用者訊息 =====
+def reply_message(reply_token, text):
+    url = "https://api.line.me/v2/bot/message/reply"
+    data = {
+        "replyToken": reply_token,
+        "messages": [{"type": "text", "text": text}]
+    }
+    requests.post(url, headers=HEADERS, json=data)
+
+# ===== 取得 Excel 最新一列資料 =====
+def get_new_rows(start, end):
+    try:
+        wb = load_workbook(EXCEL_FILE)
+        sheet = wb.active
+        msgs = []
+        for row in range(start + 1, end + 1):
+            values = [cell.value for cell in sheet[row][:4]]
+            if len(values) < 4 or any(v is None for v in values):
+                continue
+            date, time_str, name, status = values
+            msg = f"📋 新出入紀錄\n🗓 {date} {time_str}\n👤 {name}\n📌 狀態：{status}"
+            msgs.append(msg)
+        return msgs
+    except Exception as e:
+        return [f"⚠️ Excel 讀取錯誤：{e}"]
+
+# ===== 背景執行：每 10 秒偵測 Excel 新資料 =====
+def monitor_excel(interval=10):
+    global last_row_num
+    while True:
+        try:
+            if not os.path.exists(EXCEL_FILE):
+                print(f"❌ 找不到 {EXCEL_FILE}")
+                time.sleep(interval)
+                continue
+
+            wb = load_workbook(EXCEL_FILE)
+            sheet = wb.active
+            current_last_row = sheet.max_row
+
+            if current_last_row > last_row_num:
+                print(f"🆕 偵測到新增資料：{current_last_row - last_row_num} 列")
+                msgs = get_new_rows(last_row_num, current_last_row)
+                for msg in msgs:
+                    push_to_all_users(msg)
+                last_row_num = current_last_row
+        except Exception as e:
+            print("❌ 監控錯誤：", e)
+        time.sleep(interval)
+
+# ===== 主程式執行區 =====
+if __name__ == "__main__":
+    print("✅ 啟動 Flask + Excel 監控中...")
+    threading.Thread(target=monitor_excel, daemon=True).start()
+    app.run(port=5000)

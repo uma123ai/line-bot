@@ -1,0 +1,87 @@
+1. 前置準備與完整流程說明
+一、環境與工具準備
+1. 安裝 Python
+建議使用 Python 3.7 以上版本
+
+下載網址：https://www.python.org/downloads/
+
+安裝時，記得勾選「Add Python to PATH」
+
+2. 建立專案資料夾
+在電腦建立一個資料夾（例如 line_bot_project）
+
+這裡會放你的 Python 程式碼與 Excel 檔案
+
+3. 安裝 Python 套件
+打開終端機（CMD、PowerShell 或 VSCode Terminal），切換到專案資料夾：
+
+
+cd 路徑\到\line_bot_project
+安裝必要套件：
+
+
+pip install flask openpyxl requests
+
+4. 下載並安裝 ngrok
+下載網址：https://ngrok.com/download
+
+根據你的作業系統下載相對應版本
+
+解壓縮後，將 ngrok 執行檔放在專案資料夾（或電腦中任意目錄）
+
+5. 申請 LINE 官方帳號與取得權杖
+到 LINE Developers（https://developers.line.biz/）申請帳號
+
+建立一個 Messaging API 頻道
+
+取得以下重要資訊：
+
+Channel Access Token（頻道訪問令牌）
+
+User ID（可用來推播訊息的目標 ID）
+
+設定 webhook URL（先暫時留空，後面會設定）
+
+二、程式撰寫與架設流程
+1. 寫好 Flask 程式（例如 app.py）
+這個程式包含：
+
+Webhook 路由：接收 LINE 事件並回覆訊息
+
+Excel 監控背景執行緒：偵測資料新增並推播訊息到 LINE
+
+
+
+
+(重點)
+2. 執行 Flask 伺服器
+在終端機輸入：
+
+python app.py
+伺服器會在 localhost:5000 啟動並等待請求
+
+3. 啟動 ngrok 代理
+開啟另一個終端機視窗
+
+輸入以下指令：
+ngrok http 5000
+ngrok 會產生一個 HTTPS 網址（例如 https://xxxxx.ngrok.io）
+
+4. 在 LINE 官方帳號設定 Webhook URL
+把 ngrok 產生的網址後面加 /webhook
+
+例如 https://xxxxx.ngrok.io/webhook
+
+貼到 LINE Official Account Manager 的 webhook 設定裡，並啟用 webhook 功能
+
+5. 測試流程
+使用 LINE 手機 App 加機器人好友
+
+傳送訊息給機器人，Flask 程式會收到並回覆訊息
+
+在 Excel 新增一筆完整資料，監控執行緒會偵測到並推播到 LINE
+
+6. 長期運作與維護
+保持 Flask 伺服器與 ngrok 持續運行，確保 webhook 連線穩定
+
+若正式上線，可考慮架設雲端伺服器，避免 ngrok 臨時斷線
